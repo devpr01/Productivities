@@ -90,10 +90,10 @@ if [ -f "$CONFIG_PATH" ]; then
     log_info "Backed up existing client config to $BACKUP_FILE."
 fi
 
-log_info "Writing hardened global cryptography rules (Ed25519, ChaCha20/AES-GCM, Curve25519) to $CONFIG_PATH..."
+log_info "Writing hardened global cryptography rules (Ed25519/ECDSA/RSA-SHA2, ChaCha20/AES-GCM, Curve25519) to $CONFIG_PATH..."
 sudo -u "$ACTUAL_USER" bash -c "cat << EOF > \"$CONFIG_PATH\"
 Host *
-    HostKeyAlgorithms ssh-ed25519,cert-authority@openssh.com
+    HostKeyAlgorithms ssh-ed25519-cert-v01@openssh.com,ssh-ed25519,ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,rsa-sha2-512,rsa-sha2-256
     Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com
     KexAlgorithms curve25519-sha256@libssh.org,curve25519-sha256
     MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com
@@ -130,7 +130,9 @@ else
 fi
 
 sudo -u "$ACTUAL_USER" chmod 600 "$CONFIG_PATH"
-log_success "Client SSH/SCP configuration secured (mode 600)."
+log_info "Validating client SSH configuration syntax (ssh -G)..."
+sudo -u "$ACTUAL_USER" ssh -G localhost >/dev/null || log_error "Client SSH config syntax validation failed!"
+log_success "Client SSH/SCP configuration validated and secured (mode 600)."
 
 # ==========================================
 # PHASE 4: SERVER HARDENING & SFTP JAIL
